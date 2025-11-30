@@ -1,5 +1,14 @@
 import torch
 import torch.nn as nn
+from torchvision import transforms
 
-def imageTransformPipeline(image: nn.Tensor):
-    return 0
+def imageTransformPipeline():
+    vae_transforms = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.Resize((28, 28)),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ])
+
+    return vae_transforms
