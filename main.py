@@ -6,25 +6,6 @@ from utils.utils import imageTransformPipeline
 from model.VAEclass import VAEclass
 import wandb
 
-wandb.init(
-    project="fashion-mnist-vae",
-    config={
-        "architecture": "VAE",
-        "dataset": "FashionMNIST",
-        "latent_dim": 32,
-        "batch_size": 128,
-        "epochs": 100,
-        "learning_rate": 1e-3,
-        "beta_start": 0.0,
-        "beta_end": 1.0,
-        "annealing_epochs": 30
-    }
-)
-config = wandb.config
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
-
 
 # calculate VAE ELBO loss which consist of reconstruction loss and closed form KL divergence loss
 def VAE_Loss(input, recons, mean, log_var, beta=1.0):
@@ -89,7 +70,7 @@ def train_one_epoch(model, train_loader, optimizer, epoch):
 
 # FashionMNIST contains 70000 grayscale images of size 28x28 of various classes of clothes
 # Out of 70K, 60K images are for training and 10K images for testing.
-def training_script():
+def training_script(device, wandb, config):
 
     annotation_path = os.path.join("dataset/fashionmnist/fashion-mnist_test.csv")
     image_path = os.path.join("dataset/fashionmnist/train-images-idx3-ubyte")
@@ -112,7 +93,7 @@ def training_script():
     latent_dim = 32
     model = VAEclass(latent_dim)
     model = model.to(device)
-    optimizer = nn.optim.Adam()
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
     for epoch in range(1, config.epochs + 1):
         metrics = train_one_epoch(model, dataset_loader, optimizer, epoch)
@@ -143,4 +124,23 @@ def training_script():
 if __name__ == "__main__":
     print("------------ Variational Autoencoder training started -----------")
 
-    training_script()
+    wandb.init(
+        project="fashion-mnist-vae",
+        config={
+            "architecture": "VAE",
+            "dataset": "FashionMNIST",
+            "latent_dim": 32,
+            "batch_size": 128,
+            "epochs": 100,
+            "learning_rate": 1e-3,
+            "beta_start": 0.0,
+            "beta_end": 1.0,
+            "annealing_epochs": 30
+        }
+    )
+    config = wandb.config
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
+
+    training_script(device, wandb, config)
