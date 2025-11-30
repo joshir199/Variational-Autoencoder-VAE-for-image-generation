@@ -28,6 +28,13 @@ def VAE_Loss(input, recons, mean, log_var, beta=1.0):
         "kl_loss": kl_loss
     }
 
+# Adding KL annealing to avoid the risk of posterior collapse (D_kl decrease very rapidly)
+def get_beta(epoch, total_anneal_epochs=10):
+    if epoch <= total_anneal_epochs:
+        return min(1.0, epoch / total_anneal_epochs)
+    return 1.0
+
+
 def train_one_epoch(model, train_loader, optimizer, epoch):
     model.train()
     total_loss = 0
