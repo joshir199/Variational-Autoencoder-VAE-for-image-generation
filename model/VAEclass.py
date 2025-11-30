@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-import EncoderClass as VAEencoder
-import DecoderClass as VAEdecoder
+from model.EncoderClass import EncoderClass as VAEencoder
+from model.DecoderClass import DecoderClass as VAEdecoder
 
 class VAEclass(nn.Module):
 
@@ -20,7 +20,7 @@ class VAEclass(nn.Module):
         std = torch.exp(0.5*log_var)
 
         # create random sampling via external gaussian distribution as eps
-        eps = nn.randn_like(std)  # same size of std
+        eps = torch.randn_like(std)  # same size of std
 
         if is_training:
             reparam = mean + eps * std

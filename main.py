@@ -1,23 +1,26 @@
 import os
 import torch
 import torch.nn.functional as F
-from dataset.DatasetLoader import DatasetLoader
 from utils.utils import imageTransformPipeline
 from model.VAEclass import VAEclass
+from torchvision import datasets
 import wandb
 
 
 # calculate VAE ELBO loss which consist of reconstruction loss and closed form KL divergence loss
+# We maximize ELBO → we minimize the negative ELBO
+# minimize -> D_kl - loglikelihood  => D_kl + BCE
 def VAE_Loss(input, recons, mean, log_var, beta=1.0):
 
     # get decoder reconstruction loss
+    # Negative Loglikelihood
     recons_loss = F.binary_cross_entropy(recons, input, reduction="sum")
 
     # get encoder KL-divergence loss
     kl_loss = 0.5 * torch.sum(mean.pow(2) + torch.exp(log_var) - 1 - log_var)
 
     # ELBO loss
-    vae_loss = recons_loss - beta * kl_loss
+    vae_loss = recons_loss + beta * kl_loss
 
     return {
         "vae_loss": vae_loss,
@@ -72,34 +75,29 @@ def train_one_epoch(model, train_loader, optimizer, epoch):
 # Out of 70K, 60K images are for training and 10K images for testing.
 def training_script(device, wandb, config):
 
-    annotation_path = os.path.join("dataset/fashionmnist/fashion-mnist_test.csv")
-    image_path = os.path.join("dataset/fashionmnist/train-images-idx3-ubyte")
-    vae_transform = imageTransformPipeline()
-    train_dataset = DatasetLoader(
-        annotations_file = annotation_path,
-        image_dir = image_path,
-        transforms = vae_transform
-    )
 
-    dataset_loader = torch.utils.data.Dataloader(
+    vae_transform = imageTransformPipeline()
+
+    train_dataset = datasets.FashionMNIST(root='data', train=True, download=True, transform=vae_transform)
+
+    dataset_loader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=16,
+        batch_size=config["batch_size"],
         shuffle = True,
-        num_workers = 4,
+        #num_workers = 4,
         pin_memory=True
     )
 
     # define model
-    latent_dim = 32
-    model = VAEclass(latent_dim)
-    model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    latent_dim = config["latent_dim"]
+    model = VAEclass(latent_dim).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
 
-    for epoch in range(1, config.epochs + 1):
+    for epoch in range(1, config["epochs"] + 1):
         metrics = train_one_epoch(model, dataset_loader, optimizer, epoch)
 
         # Log metrics
-        wandb.log(metrics, step=epoch)
+        #wandb.log(metrics, step=epoch)
 
         # Log images every 5 epochs
         if epoch % 5 == 0 or epoch == 1:
@@ -124,6 +122,7 @@ def training_script(device, wandb, config):
 if __name__ == "__main__":
     print("------------ Variational Autoencoder training started -----------")
 
+    '''
     wandb.init(
         project="fashion-mnist-vae",
         config={
@@ -139,6 +138,19 @@ if __name__ == "__main__":
         }
     )
     config = wandb.config
+    '''
+
+    config = {
+        "architecture": "VAE",
+        "dataset": "FashionMNIST",
+        "latent_dim": 32,
+        "batch_size": 128,
+        "epochs": 1,
+        "learning_rate": 1e-3,
+        "beta_start": 0.0,
+        "beta_end": 1.0,
+        "annealing_epochs": 30
+    }
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")

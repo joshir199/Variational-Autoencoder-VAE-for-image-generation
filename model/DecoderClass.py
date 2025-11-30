@@ -40,7 +40,6 @@ class DecoderClass(nn.Module):
         # get normalised pixel values of 28x28 size
         self.deconv4 = nn.Sequential(
             nn.ConvTranspose2d(32, 1, kernel_size=3, stride=1, padding=1),
-            nn.sigmoid()
         )
 
 
@@ -57,6 +56,7 @@ class DecoderClass(nn.Module):
         h2 = self.deconv2(h1)
         h3 = self.deconv3(h2)
         h4 = self.deconv4(h3)
+        recons = torch.sigmoid(h4)
 
-        return h4
+        return recons
 
