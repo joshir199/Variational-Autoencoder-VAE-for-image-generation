@@ -39,15 +39,17 @@ class VAEclass(nn.Module):
 
         return recons, z, mean, log_var
 
-    def sample(self, num_samples, device: torch.device):
+    def generate_sample(self, num_samples, device: torch.device):
         # Now, using the prior distribution of latent variable z, p(z) = N(0,I)
         # we will generate the new images
-        z = nn.randn(num_samples, self.latent_dim, device=device)
+        z = torch.randn(num_samples, self.latent_dim, device=device)
 
         # generate new samples at test-time
         with torch.no_grad():
             samples = self.decoder(z)
 
+        # make sure it is normalised between 0 & 1
+        samples = torch.clamp(samples, 0, 1)
         return samples
 
     def reconstruct_eval(self, x):
