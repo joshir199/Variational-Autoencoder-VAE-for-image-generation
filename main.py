@@ -4,14 +4,40 @@ import torch.nn.functional as F
 from utils.utils import imageTransformPipeline
 from model.VAEclass import VAEclass
 from torchvision import datasets
-import wandb
+
+try:
+    import wandb
+
+    WANDB_FOUND = True
+except ImportError:
+    WANDB_FOUND = False
+
+
+def get_gpu_memory():
+    command = "nvidia-smi --query-gpu=memory.used --format=csv"
+    memory_used_info = sp.check_output(command.split()).decode('ascii').split('\n')[:-1][1:]
+    memory_used_values = [int(x.split()[0]) for i, x in enumerate(memory_used_info)]
+    return memory_used_values
+
+
+def initialize_debugger(wandb_name=None):
+    if WANDB_FOUND and wandb_name != None:
+        wandb_project = wandb_name
+        wandb_run_name = "fashion-mnist"
+        id = hashlib.md5(wandb_run_name.encode('utf-8')).hexdigest()
+        # name = os.path.basename(args.model_path) if wandb_run_name is None else wandb_run_name
+        name = os.path.basename(args.source_path) + '_' + str(id)
+        wandb.init(
+            project=wandb_project,
+            dir=args.model_path,
+            id=id
+        )
 
 
 # calculate VAE ELBO loss which consist of reconstruction loss and closed form KL divergence loss
 # We maximize ELBO → we minimize the negative ELBO
 # minimize -> D_kl - loglikelihood  => D_kl + BCE
 def VAE_Loss(input, recons, mean, log_var, beta=1.0):
-
     # get decoder reconstruction loss
     # Negative Loglikelihood
     recons_loss = F.binary_cross_entropy(recons, input, reduction="sum")
@@ -28,6 +54,7 @@ def VAE_Loss(input, recons, mean, log_var, beta=1.0):
         "kl_loss": kl_loss
     }
 
+
 # Adding KL annealing to avoid the risk of posterior collapse (D_kl decrease very rapidly)
 def get_beta(epoch, total_anneal_epochs=10):
     if epoch <= total_anneal_epochs:
@@ -35,13 +62,13 @@ def get_beta(epoch, total_anneal_epochs=10):
     return 1.0
 
 
-def train_one_epoch(model, train_loader, optimizer, epoch):
+def train_one_epoch(model, train_loader, optimizer, epoch, use_wandb):
     model.train()
     total_loss = 0
     recons_losses = 0
     kl_losses = 0
 
-    beta = 1.0 #get_beta(epoch)
+    beta = 1.0  # get_beta(epoch)
 
     for batch_idx, (img_data, _) in enumerate(train_loader):
         data = img_data.to(device)  # [B, 1, 28, 28]
@@ -61,10 +88,10 @@ def train_one_epoch(model, train_loader, optimizer, epoch):
         recons_losses += loss_dict['recons_loss'].item()
         kl_losses += loss_dict['kl_loss'].item()
 
-        if batch_idx % 100 == 0:
-            print(f"Train Epoch: {epoch} [{batch_idx}/{len(train_loader)}] "
-                  f"Loss: {loss.item():.4f} | Recons: {loss_dict['recons_loss'].item()/len(data):.4f} | "
-                  f"KL: {loss_dict['kl_loss'].item()/len(data):.4f} | β: {beta:.3f}")
+        # if batch_idx % 100 == 0:
+        #    print(f"Train Epoch: {epoch} [{batch_idx}/{len(train_loader)}] "
+        #          f"Loss: {loss.item():.4f} | Recons: {loss_dict['recons_loss'].item() / len(data):.4f} | "
+        #          f"KL: {loss_dict['kl_loss'].item() / len(data):.4f} ")
 
     avg_loss = total_loss / len(train_loader.dataset)
     avg_recon = recons_losses / len(train_loader.dataset)
@@ -80,9 +107,7 @@ def train_one_epoch(model, train_loader, optimizer, epoch):
 
 # FashionMNIST contains 70000 grayscale images of size 28x28 of various classes of clothes
 # Out of 70K, 60K images are for training and 10K images for testing.
-def training_script(device, wandb, config):
-
-
+def training_script(device, config, use_wandb):
     vae_transform = imageTransformPipeline()
 
     train_dataset = datasets.FashionMNIST(root='data', train=True, download=True, transform=vae_transform)
@@ -90,8 +115,8 @@ def training_script(device, wandb, config):
     dataset_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=config["batch_size"],
-        shuffle = True,
-        #num_workers = 4,
+        shuffle=True,
+        # num_workers = 4,
         pin_memory=True
     )
 
@@ -101,13 +126,14 @@ def training_script(device, wandb, config):
     optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
 
     for epoch in range(1, config["epochs"] + 1):
-        metrics = train_one_epoch(model, dataset_loader, optimizer, epoch)
+        metrics = train_one_epoch(model, dataset_loader, optimizer, epoch, use_wandb)
 
         # Log metrics
-        #wandb.log(metrics, step=epoch)
+        if use_wandb:
+            wandb.log(metrics, step=epoch)
 
-        # Log images every 5 epochs
-        if epoch % 5 == 0 or epoch == 1:
+        # print training details every 10 epochs
+        if epoch % 10 == 0 or epoch == 1:
             print(f"Train Epoch: {epoch} : "
                   f"total Loss: {metrics['train/loss']:.4f} | Recons loss: {metrics['train/recons_loss']:.4f} | "
                   f"KL loss: {metrics['train/kl_loss']:.4f} ")
@@ -124,42 +150,34 @@ def training_script(device, wandb, config):
     print("Training completed!")
 
 
-
-
 if __name__ == "__main__":
     print("------------ Variational Autoencoder training started -----------")
-
-    '''
-    wandb.init(
-        project="fashion-mnist-vae",
-        config={
-            "architecture": "VAE",
-            "dataset": "FashionMNIST",
-            "latent_dim": 32,
-            "batch_size": 128,
-            "epochs": 100,
-            "learning_rate": 1e-3,
-            "beta_start": 0.0,
-            "beta_end": 1.0,
-            "annealing_epochs": 30
-        }
-    )
-    config = wandb.config
-    '''
 
     config = {
         "architecture": "VAE",
         "dataset": "FashionMNIST",
         "latent_dim": 32,
         "batch_size": 128,
-        "epochs": 1,
+        "epochs": 100,
         "learning_rate": 1e-3,
         "beta_start": 0.0,
         "beta_end": 1.0,
         "annealing_epochs": 30
     }
+    wandb_name = config["architecture"]
+    if wandb_name is None:
+        use_wandb = False
+    else:
+        use_wandb = True
+
+    wandb_enabled = (WANDB_FOUND and use_wandb)
+
+    initialize_debugger(wandb_name)
+
+    if wandb_enabled:
+        wandb.run.summary['GPU'] = torch.cuda.get_device_name(0).split()[-1]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    training_script(device, wandb, config)
+    training_script(device, config, wandb_enabled)
