@@ -1,14 +1,17 @@
 import os
+import sys
+import json
 import torch
 import torch.nn.functional as F
 from utils.utils import imageTransformPipeline
 from model.VAEclass import VAEclass
 from torchvision import datasets
+from argparse import ArgumentParser, Namespace
 
 try:
     import wandb
 
-    WANDB_FOUND = True
+    WANDB_FOUND = False
 except ImportError:
     WANDB_FOUND = False
 
@@ -107,7 +110,7 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_wandb):
 
 # FashionMNIST contains 70000 grayscale images of size 28x28 of various classes of clothes
 # Out of 70K, 60K images are for training and 10K images for testing.
-def training_script(device, config, use_wandb):
+def training_script(device, config, model_path, use_wandb):
     vae_transform = imageTransformPipeline()
 
     train_dataset = datasets.FashionMNIST(root='data', train=True, download=True, transform=vae_transform)
@@ -139,32 +142,43 @@ def training_script(device, config, use_wandb):
                   f"KL loss: {metrics['train/kl_loss']:.4f} ")
 
         # Save checkpoint
-        if epoch % 20 == 0:
+        if epoch % 20 == 1:
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': metrics['train/loss'],
-            }, f"vae_checkpoint_epoch{epoch}.pth")
+            }, f"{model_path}/vae_checkpoint_epoch{epoch}.pth")
 
     print("Training completed!")
 
 
 if __name__ == "__main__":
-    print("------------ Variational Autoencoder training started -----------")
 
-    config = {
-        "architecture": "VAE",
-        "dataset": "FashionMNIST",
-        "latent_dim": 32,
-        "batch_size": 128,
-        "epochs": 100,
-        "learning_rate": 1e-3,
-        "beta_start": 0.0,
-        "beta_end": 1.0,
-        "annealing_epochs": 30
-    }
-    wandb_name = config["architecture"]
+    # training command: python3 train.py --config_file scripts/config.json --wandb_name vae_exp2 --model_path checkpoints
+    print("------------ Variational Autoencoder training started -----------")
+    # Set up command line argument parser
+    parser = ArgumentParser(description="Training script parameters")
+    parser.add_argument("--config_file", type=str, default="scripts/config.json", help="Path to the configuration file")
+    parser.add_argument("--wandb_name", type=str, default=None)
+    parser.add_argument("--model_path", type=str, default="./checkpoints/exp_1", help="Path to store checkpoint")
+    args = parser.parse_args(sys.argv[1:])
+
+    # Read and parse the configuration file
+    try:
+        with open(args.config_file, 'r') as file:
+            config = json.load(file)
+    except FileNotFoundError:
+        print(f"Error: Configuration file '{args.config_file}' not found.")
+        exit(1)
+    except json.JSONDecodeError as e:
+        print(f"Error: Failed to parse the JSON configuration file: {e}")
+        exit(1)
+
+    wandb_name = args.wandb_name
+    model_path = args.model_path + '/' + wandb_name
+    os.makedirs(model_path, exist_ok=True)
+
     if wandb_name is None:
         use_wandb = False
     else:
@@ -180,4 +194,4 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    training_script(device, config, wandb_enabled)
+    training_script(device, config, model_path, wandb_enabled)

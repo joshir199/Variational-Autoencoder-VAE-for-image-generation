@@ -1,0 +1,11 @@
+{
+    "experiment": "VAE_Exp1",
+    "dataset": "FashionMNIST",
+    "latent_dim": 32,
+    "batch_size": 128,
+    "epochs": 100,
+    "learning_rate": 1e-3,
+    "beta_start": 0.0,
+    "beta_end": 1.0,
+    "annealing_epochs": 30
+}
