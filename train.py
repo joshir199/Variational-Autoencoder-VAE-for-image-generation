@@ -59,7 +59,7 @@ def VAE_Loss(input, recons, mean, log_var, beta=1.0):
 
 
 # Adding KL annealing to avoid the risk of posterior collapse (D_kl decrease very rapidly)
-def get_beta(epoch, total_anneal_epochs=10):
+def get_beta(epoch, total_anneal_epochs=30):
     if epoch <= total_anneal_epochs:
         return min(1.0, epoch / total_anneal_epochs)
     return 1.0
@@ -71,7 +71,7 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_wandb):
     recons_losses = 0
     kl_losses = 0
 
-    beta = 1.0  # get_beta(epoch)
+    beta = get_beta(epoch)
 
     for batch_idx, (img_data, _) in enumerate(train_loader):
         data = img_data.to(device)  # [B, 1, 28, 28]
@@ -111,7 +111,7 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_wandb):
 # FashionMNIST contains 70000 grayscale images of size 28x28 of various classes of clothes
 # Out of 70K, 60K images are for training and 10K images for testing.
 def training_script(device, config, model_path, use_wandb):
-    vae_transform = imageTransformPipeline()
+    vae_transform = imageTransformPipeline(is_train=True)
 
     train_dataset = datasets.FashionMNIST(root='data', train=True, download=True, transform=vae_transform)
 
@@ -119,7 +119,7 @@ def training_script(device, config, model_path, use_wandb):
         train_dataset,
         batch_size=config["batch_size"],
         shuffle=True,
-        # num_workers = 4,
+        num_workers = 4,
         pin_memory=True
     )
 
