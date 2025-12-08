@@ -14,7 +14,7 @@ from utils.utils import imageTransformPipeline
 # to generate new samples randomly
 # Using decoder, we will generate the image out of randomly sampled noise
 # Sample z~N(0,I) -> Decoder = generated image
-def generate_interpolated_image(device, config, model_chkpt_path, num_samples):
+def generate_interpolated_image(device, config, model_chkpt_path, num_steps):
     # Get test images
     vae_transform = imageTransformPipeline()
     test_dataset = datasets.FashionMNIST(root='data', train=False, download=True, transform=vae_transform)
@@ -40,6 +40,8 @@ def generate_interpolated_image(device, config, model_chkpt_path, num_samples):
     with torch.no_grad():
         next_batch,_ = next(iter(dataset_loader))
         image_batch = next_batch[:2].to(device)
+        img1 = image_batch[0:1]  # [1, 1, 28, 28]
+        img2 = image_batch[1:2]
 
         # get mean and variance for latent space distribution for both images
         mean, log_var = model.encoder(image_batch)
@@ -64,36 +66,42 @@ def generate_interpolated_image(device, config, model_chkpt_path, num_samples):
             # (1, C, H, W) * N -> (N, C, H, W)
             return torch.cat(images)
 
-        img_samples = interpolate(model, z1, z2, steps=4)
+        img_samples = interpolate(model, z1, z2, steps=num_steps)
 
 
 
     print("Interpolated Samples generated properly")
-    # visualize the generated image
-    grid = vutils.make_grid(img_samples.cpu(), nrow=4, normalize=True, padding=2)
 
-    plt.figure(figsize=(10, 10))
+    full_sequence = torch.cat([
+        img1.cpu(),  # Real image 1
+        img_samples.cpu(),  # Interpolated steps
+        img2.cpu()  # Real image 2
+    ], dim=0)  # shape: [steps + 2, 1, 28, 28]
+    # visualize the generated image
+    grid = vutils.make_grid(full_sequence, nrow=num_steps+2, normalize=True, padding=4, pad_value=1)
+
+    plt.figure(figsize=(16, 4))
     plt.axis("off")
-    plt.title(f"VAE Generated Fashion-MNIST interpolated samples (latent_dim={latent_dim})")
-    plt.imshow(grid.permute(1, 2, 0).cpu().numpy())
+    plt.title(f"VAE Generated Fashion-MNIST :Latent Space Interpolation (z1 → z2) (latent_dim={latent_dim})")
+    plt.imshow(grid.permute(1, 2, 0).cpu().numpy(), cmap='gray')
     plt.tight_layout()
     # plt.show()
 
     folder_name = os.path.basename(os.path.dirname(model_chkpt_path))
     output_path = "./outputs/interpolate_generated_images/" + folder_name
     os.makedirs(output_path, exist_ok=True)
-    vutils.save_image(img_samples.cpu(), f"{output_path}/vae_interpolated_generated_samples.png", nrow=2, normalize=True)
+    vutils.save_image(full_sequence, f"{output_path}/vae_latent_interpolation_with_originals.png", nrow=num_steps + 2, normalize=True, pad_value=1)
     print("Saved: vae_generated_interpolated_samples.png")
 
 
 if __name__ == "__main__":
 
-    # training command: python3 generate_interpolated_image.py --config_file scripts/config.json --num_samples 4 --saved_model_path checkpoints/vae_exp1/vae_chkpt_e100.pth
+    # training command: python3 generate_interpolated_image.py --config_file scripts/config.json --num_steps 4 --saved_model_path checkpoints/vae_exp1/vae_chkpt_e100.pth
     print("------------ Variational Autoencoder training started -----------")
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")
     parser.add_argument("--config_file", type=str, default="scripts/config.json", help="Path to the configuration file")
-    parser.add_argument("--num_samples", type=int, default=4)
+    parser.add_argument("--num_steps", type=int, default=4)
     parser.add_argument("--saved_model_path", type=str, default="./checkpoints/vae_exp1/vae_chkpt_e100.pth",
                         help="Path to saved checkpoint")
     args = parser.parse_args(sys.argv[1:])
@@ -110,9 +118,9 @@ if __name__ == "__main__":
         exit(1)
 
     model_path = args.saved_model_path
-    num_samples = args.num_samples
+    num_steps = args.num_steps
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    generate_interpolated_image(device, config, model_path, num_samples)
+    generate_interpolated_image(device, config, model_path, num_steps)
