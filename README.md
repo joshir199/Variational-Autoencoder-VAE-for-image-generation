@@ -126,7 +126,7 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
  Linear interpolation in latent space between two encoded images shows smooth transitions, demonstrating structured latent space.
  
 <div align="center">
-    <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/interpolate_generated_images/vae_exp1/vae_interpolated_generated_samples.png" alt="vae  exp1 interpolated image">
+    <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/interpolate_generated_images/vae_exp1/vae_latent_interpolation_with_originals.png" alt="vae  exp1 interpolated image">
     <p><i>Figure 5: Generated images from vae exp_1 (leftmost: image A, rightmost: image B and between: generated images after interpolation).</i></p>
 </div>
 
