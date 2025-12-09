@@ -136,6 +136,13 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
     <p><i>Figure 6: Generated images from vae exp_2 (leftmost: image A, rightmost: image B and between: generated images after interpolation).</i></p>
 </div>
     
+*******************************************************
+# Disentanglement Analysis of VAE latent variable 
+
+* β=1: Standard VAE (balances reconstruction and regularization).
+* β>1: Stronger penalty on KL → forces even more independence and alignment to the prior. The model is heavily pressured to make q(z|x) factorize independently (diagonal covariance) and match the prior closely.
+* β<1: Weaker KL → better reconstruction but more entangled latents (useful for high-fidelity generation but less interpretability).
+
 
 
 
