@@ -102,10 +102,15 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/training/vae_exp1_train_loss.png" alt="vae  exp1 train loss">
     <p><i>Figure 1: Train loss per epoch for vae experiment_1 with fixed beta = 1.</i></p>
 </div>
-    
+
 <div align="center">
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/training/vae_exp2_train_loss.png" alt="vae  exp2 train loss">
     <p><i>Figure 2: Train loss per epoch for vae experiment_2 with KL annealing (till 30 epoch, later beta =1).</i></p>
+</div>
+    
+<div align="center">
+    <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/training/KL_divergence_loss_for_different_beta.png" alt="vae  exp3 KL divergence loss">
+    <p><i>Figure 3: KL-Divergence loss per epoch for vae experiment_3 as compared with experiment_2 with KL annealing (till 30 epoch). The loss depicts the behaviour of KL-divergence loss term during better disentanglement of latent variables.</i></p>
 </div>
 
 # Results
@@ -114,12 +119,12 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
   
 <div align="center">
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/generated_images/vae_exp1/vae_generated_samples.png" alt="vae  exp1 generated image">
-    <p><i>Figure 3: Generated images from vae exp_1.</i></p>
+    <p><i>Figure 4: Generated images from vae exp_1.</i></p>
 </div>
     
 <div align="center">
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/generated_images/vae_exp2/vae_generated_samples.png" alt="vae  exp2 generated image">
-    <p><i>Figure 4: Generated images from vae exp_2.</i></p>
+    <p><i>Figure 5: Generated images from vae exp_2.</i></p>
 </div>
 
 - **Image Interpolation**
@@ -127,13 +132,13 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
  
 <div align="center">
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/interpolate_generated_images/vae_exp1/vae_latent_interpolation_with_originals.png" alt="vae  exp1 interpolated image">
-    <p><i>Figure 5: Generated images from vae exp_1 (leftmost: image A, rightmost: image B and between: generated images after interpolation).</i></p>
+    <p><i>Figure 6: Generated images from vae exp_1 (leftmost: image A, rightmost: image B and between: generated images after interpolation).</i></p>
 </div>
 
     
 <div align="center">
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/interpolate_generated_images/vae_exp2/vae_latent_interpolation_with_originals.png" alt="vae  exp2 interpolated image">
-    <p><i>Figure 6: Generated images from vae exp_2 (leftmost: image A, rightmost: image B and between: generated images after interpolation).</i></p>
+    <p><i>Figure 7: Generated images from vae exp_2 (leftmost: image A, rightmost: image B and between: generated images after interpolation).</i></p>
 </div>
     
 *******************************************************
@@ -143,6 +148,15 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
 * β>1: Stronger penalty on KL → forces even more independence and alignment to the prior. The model is heavily pressured to make q(z|x) factorize independently (diagonal covariance) and match the prior closely.
 * β<1: Weaker KL → better reconstruction but more entangled latents (useful for high-fidelity generation but less interpretability).
 
+<div align="center">
+    <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/generated_images/vae_exp3_beta4/vae_generated_samples.png" alt="vae  exp3 interpolated image">
+    <p><i>Figure 8: Generated images from vae exp_3 (with beta = 4). As compared to exp2, the generated images are poorer when disentanglement is increased because reconstruction loss is given less importance.</i></p>
+</div>
+
+<div align="center">
+    <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/interpolate_generated_images/vae_exp3_beta4/vae_latent_interpolation_with_originals.png" alt="vae  exp3 interpolated image">
+    <p><i>Figure 9: Generated images from vae exp_3 (with beta = 4) (leftmost: image A, rightmost: image B and between: generated images after interpolation). As compared to exp2, the generated images from interpolation are better and diverse when disentanglement is increased because KL-divergence loss is given more importance.</i></p>
+</div>
 
 
 
