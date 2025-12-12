@@ -148,6 +148,10 @@ where β controls the trade-off (used in **β-VAE** for disentangled representat
 * β>1: Stronger penalty on KL → forces even more independence and alignment to the prior. The model is heavily pressured to make q(z|x) factorize independently (diagonal covariance) and match the prior closely.
 * β<1: Weaker KL → better reconstruction but more entangled latents (useful for high-fidelity generation but less interpretability).
 
+To evaluate disentanglement, traverse each latent dimension while fixing others at mean and vary selected one from -3σ to +3σ. Further, visualize if it controls one factor cleanly.
+
+
+
 <div align="center">
     <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/outputs/generated_images/vae_exp3_beta4/vae_generated_samples.png" alt="vae  exp3 interpolated image">
     <p><i>Figure 8: Generated images from vae exp_3 (with beta = 4). As compared to exp2, the generated images are poorer when disentanglement is increased because reconstruction loss is given less importance.</i></p>
