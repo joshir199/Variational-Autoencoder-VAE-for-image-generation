@@ -9,6 +9,13 @@ The true aim of VAE is to learn best representations in latent space often calle
 * Disentangled: Each latent dimension should control one meaningful feature, and only that feature.
 * Statistically independent: Changing one latent feature should not accidentally change others.
 * Causal: The dimensions of latent vector correspond to actual causes in the real world.  
+*********************************************************
+# VAE Model Architecture
+
+<div align="center">
+    <img src="https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/utils/images/vae_architecture.png" alt="vae architecture">
+    <p><i>Variational AutoEncoder (VAE) architecture diagram</i></p>
+</div>
 
 *********************************************************
 # Mathematical Concepts & their formulation
