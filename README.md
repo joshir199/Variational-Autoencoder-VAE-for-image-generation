@@ -169,9 +169,12 @@ To evaluate disentanglement, traverse each latent dimension while fixing others 
     <p><i>Figure 9: Generated images from vae exp_3 (with beta = 4) (leftmost: image A, rightmost: image B and between: generated images after interpolation). As compared to exp2, the generated images from interpolation are better and diverse when disentanglement is increased because KL-divergence loss is given more importance.</i></p>
 </div>
 
+***********************************************************************************
+## VQ-VAE : Vector Quantisation VAE
 
+This is an extension of the standard VAE which can learn discrete latent representation through vector quantisation. By quantizing the latent space into a finite set of discrete codes (like a codebook), VQ-VAE enables more compact, interpretable, and efficient representations, making it suitable for multi-modalities.
 
-
+Full details about architectures and training is mentioned [here](https://github.com/joshir199/Variational-Autoencoder-VAE-for-image-generation/blob/main/vq_vae/VQ_VAE.md).
 
 
 
