@@ -90,6 +90,17 @@ This loss is summed/averaged over the batch during training. The three different
 * Encoder: Reconstruction (via STE) + commitment (pulls z<sub>e</sub> to e).
 * latents (Codebook): Only VQ term (pulls e to z<sub>e</sub> clusters).
 
+*************************************************************************************
+## Understanding Priors from VQ-VAE
+
+VQ-VAE uses two-stage approach to priors, first one for learning compressed representations during training and later for enabling high-quality, structured generation during inference.
+
+While continuous VAE can easily use Gaussian prior during both training as well as generation steps but Due to discrete nature, VQ-VAE ses different approaches to learn coherence between latent codes.
+
+
+
+
+
 
 
 
