@@ -33,7 +33,7 @@ class VAEclass(nn.Module):
 
         mean, log_var = self.encoder(x)
         # random latent variable
-        z = self.reparameterisation(mean, log_var)
+        z = self.reparameterisation(mean, log_var)  # inject randomness via random sampling
 
         recons = self.decoder(z)
 

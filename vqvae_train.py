@@ -4,7 +4,7 @@ import json
 import torch
 import torch.nn.functional as F
 from utils.utils import imageTransformPipeline
-from model.VAEclass import VAEclass
+from vq_vae.VQ_VAE_Model import VQ_VAE_Model
 from torchvision import datasets
 from argparse import ArgumentParser, Namespace
 import hashlib
@@ -38,24 +38,18 @@ def initialize_debugger(wandb_name=None):
         )
 
 
-# calculate VAE ELBO loss which consist of reconstruction loss and closed form KL divergence loss
-# We maximize ELBO → we minimize the negative ELBO
-# minimize -> D_kl - loglikelihood  => D_kl + BCE
-def VAE_Loss(input, recons, mean, log_var, beta=1.0):
+# calculate VQ-VAE ELBO loss which consist of reconstruction loss and loss for codebook update
+def VQ_VAE_Loss(input, recons, vq_loss, commitment_loss, beta=1.0):
     # get decoder reconstruction loss
     # Negative Loglikelihood
     recons_loss = F.binary_cross_entropy(recons, input, reduction="sum")
 
-    # get encoder KL-divergence loss
-    kl_loss = 0.5 * torch.sum(mean.pow(2) + torch.exp(log_var) - 1 - log_var)
-
-    # ELBO loss
-    vae_loss = recons_loss + beta * kl_loss
+    # VQ-VAE loss
+    vqvae_loss = recons_loss + vq_loss + beta * commitment_loss
 
     return {
-        "vae_loss": vae_loss,
-        "recons_loss": recons_loss,
-        "kl_loss": kl_loss
+        "vqvae_loss": vqvae_loss,
+        "recons_loss": recons_loss
     }
 
 
@@ -72,19 +66,20 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_wandb):
     model.train()
     total_loss = 0
     recons_losses = 0
-    kl_losses = 0
+    vq_losses = 0
+    commitment_losses = 0
 
-    beta = get_beta(epoch)
+    beta = 1.0 #get_beta(epoch)
 
     for batch_idx, (img_data, _) in enumerate(train_loader):
         data = img_data.to(device)  # [B, 1, 28, 28]
 
         # initialize optimizer
         optimizer.zero_grad()
-        recon_batch, z, mu, logvar = model(data)
+        recon_batch, z_q, vq_loss, commitment_loss, encoded_indices  = model(data)
 
-        loss_dict = VAE_Loss(data, recon_batch, mu, logvar, beta=beta)
-        loss = loss_dict['vae_loss']
+        loss_dict = VQ_VAE_Loss(data, recon_batch, vq_loss, commitment_loss, beta=beta)
+        loss = loss_dict['vqvae_loss']
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -92,21 +87,25 @@ def train_one_epoch(model, train_loader, optimizer, epoch, use_wandb):
 
         total_loss += loss.item()
         recons_losses += loss_dict['recons_loss'].item()
-        kl_losses += loss_dict['kl_loss'].item()
+        vq_losses += vq_loss.item()
+        commitment_losses += commitment_loss.item()
 
         # if batch_idx % 100 == 0:
         #    print(f"Train Epoch: {epoch} [{batch_idx}/{len(train_loader)}] "
         #          f"Loss: {loss.item():.4f} | Recons: {loss_dict['recons_loss'].item() / len(data):.4f} | "
         #          f"KL: {loss_dict['kl_loss'].item() / len(data):.4f} ")
 
-    avg_loss = total_loss / len(train_loader.dataset)
-    avg_recon = recons_losses / len(train_loader.dataset)
-    avg_kl = kl_losses / len(train_loader.dataset)
+    dataset_size = len(train_loader.dataset)
+    avg_loss = total_loss / dataset_size
+    avg_recon = recons_losses / dataset_size
+    avg_vq = vq_losses / dataset_size
+    avg_commitment = commitment_losses / dataset_size
 
     return {
         "train/loss": avg_loss,
         "train/recons_loss": avg_recon,
-        "train/kl_loss": avg_kl,
+        "train/vq_loss": avg_vq,
+        "train/commitment_loss": avg_commitment,
         "train/beta": beta
     }
 
@@ -128,7 +127,7 @@ def training_script(device, config, model_path, use_wandb):
 
     # define model
     latent_dim = config["latent_dim"]
-    model = VAEclass(latent_dim).to(device)
+    model = VQ_VAE_Model(latent_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"])
 
     for epoch in range(1, config["epochs"] + 1):
@@ -142,7 +141,7 @@ def training_script(device, config, model_path, use_wandb):
         if epoch % 10 == 0 or epoch == 1:
             print(f"Train Epoch: {epoch} : "
                   f"total Loss: {metrics['train/loss']:.4f} | Recons loss: {metrics['train/recons_loss']:.4f} | "
-                  f"KL loss: {metrics['train/kl_loss']:.4f} ")
+                  f"VQ loss: {metrics['train/vq_loss']:.4f} | Commitment loss: {metrics['train/commitment_loss']:.4f}")
 
         # Save checkpoint
         if epoch % 25 == 0:
@@ -151,14 +150,14 @@ def training_script(device, config, model_path, use_wandb):
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': metrics['train/loss'],
-            }, f"{model_path}/vae_checkpoint_epoch{epoch}.pth")
+            }, f"{model_path}/vqvae_checkpoint_epoch{epoch}.pth")
 
     print("Training completed!")
 
 
 if __name__ == "__main__":
 
-    # training command: python3 train.py --config_file scripts/config.json --wandb_name vae_exp2 --model_path checkpoints
+    # training command: python3 vqvae_train.py --config_file scripts/config.json --wandb_name vqvae_exp1 --model_path checkpoints
     print("------------ Variational Autoencoder training started -----------")
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")
