@@ -157,7 +157,7 @@ def training_script(device, config, model_path, use_wandb):
 
 if __name__ == "__main__":
 
-    # training command: python3 vqvae_train.py --config_file scripts/config.json --wandb_name vqvae_exp1 --model_path checkpoints
+    # training command: python3 vqvae_train.py --config_file scripts/config_vqvae.json --wandb_name vqvae_exp1 --model_path checkpoints
     print("------------ Variational Autoencoder training started -----------")
     # Set up command line argument parser
     parser = ArgumentParser(description="Training script parameters")

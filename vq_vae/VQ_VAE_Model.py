@@ -45,7 +45,7 @@ class VQ_VAE_Model(nn.Module):
 
             # Straight-through estimator
             # The encoder receives gradients as if quantization were identity
-            z_q_st = z_e + (z_q - z_e).detach()  # during foward => z_q { .detach() do nothing } and during backward = dz_q_st/dz_e = 1 {.detach makes 2nd term=0}
+            z_q_st = z_e + (z_q - z_e).detach()  # during forward => z_q { .detach() do nothing } and during backward = dz_q_st/dz_e = 1 {.detach makes 2nd term=0}
 
             return z_q, z_q_st, vq_loss, commitment_loss, encode_indices
 
